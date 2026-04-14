@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Portal — Secure Examination System</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede8;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9a9a96;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --radius: 8px; --radius-lg: 12px;
+    --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --green: #3B6D11; --green-bg: #EAF3DE; --green-text: #27500A;
+    --red: #A32D2D; --red-bg: #FCEBEB; --red-text: #791F1F;
+    --amber: #854F0B; --amber-bg: #FAEEDA; --amber-text: #633806;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c; --bg2: #2a2a28; --bg3: #323230;
+      --text: #f0efe8; --text2: #a0a09a; --text3: #6b6b67;
+      --border: rgba(255,255,255,0.10); --border2: rgba(255,255,255,0.20);
+      --blue: #378ADD; --blue-bg: #042C53; --blue-text: #B5D4F4;
+      --green: #639922; --green-bg: #173404; --green-text: #C0DD97;
+      --red: #E24B4A; --red-bg: #501313; --red-text: #F7C1C1;
+      --amber: #EF9F27; --amber-bg: #412402; --amber-text: #FAC775;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+  .hidden { display: none !important; }
+  .btn { padding: 9px 20px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: transparent; color: var(--text); cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.15s; font-family: inherit; }
+  .btn:hover { background: var(--bg2); }
+  .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn-primary:hover { background: var(--blue-text); border-color: var(--blue-text); }
+  .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-danger:hover { background: var(--red-text); }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-success:hover { background: var(--green-text); }
+  .btn-outline-danger { border-color: var(--red); color: var(--red); }
+  .btn-outline-danger:hover { background: var(--red-bg); }
+  input, select, textarea { width: 100%; padding: 9px 13px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 14px; font-family: inherit; transition: outline 0.1s; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+  label { cursor: pointer; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .section-title { font-size: 18px; font-weight: 500; margin-bottom: 1rem; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: var(--radius); font-size: 12px; font-weight: 500; }
+  .badge-success { background: var(--green-bg); color: var(--green); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); }
+  .tag-pass { color: var(--green); font-weight: 500; }
+  .tag-fail { color: var(--red); font-weight: 500; }
+  .info-box { background: var(--blue-bg); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--blue-text); line-height: 1.6; }
+  .warn-box { background: var(--amber-bg); border: 0.5px solid #EF9F27; border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--amber-text); }
+  .err-text { color: var(--red); font-size: 13px; margin-top: 8px; }
+  .page { max-width: 780px; margin: 0 auto; padding: 2rem 1.25rem; }
+  .page-narrow { max-width: 420px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+  /* Loading overlay */
+  #loading-overlay { position: fixed; inset: 0; background: var(--bg3); z-index: 99999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Exam fullscreen overlay */
+  #screen-exam { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg3); z-index: 9999; overflow-y: auto; padding: 1.25rem; }
+  #exam-inner { max-width: 760px; margin: 0 auto; }
+
+  /* Header bar in exam */
+  .exam-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 1.25rem; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 16px; }
+  .timer { font-size: 22px; font-weight: 600; color: var(--blue); min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+  .timer.urgent { color: var(--red); }
+
+  /* Option hover */
+  .opt-label { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius); cursor: pointer; transition: background 0.1s; border: 0.5px solid transparent; margin-bottom: 4px; }
+  .opt-label:hover { background: var(--bg2); }
+  .opt-label.selected { background: var(--blue-bg); border-color: var(--blue); }
+  .opt-label input[type=radio] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; accent-color: var(--blue); }
+
+  /* Result card */
+  .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 14px 10px; text-align: center; }
+  .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .metric-value { font-size: 22px; font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 0.5px solid var(--border); }
+  th { font-weight: 500; color: var(--text2); }
+  tr:last-child td { border-bottom: none; }
+
+  .topbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 12px 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-title { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+
+  /* Dashed add button */
+  .btn-dashed { width: 100%; border-style: dashed; margin-top: 4px; }
+
+  @media (max-width: 520px) {
+    .result-grid { grid-template-columns: 1fr 1fr; }
+    th:nth-child(n+5), td:nth-child(n+5) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:var(--text2)">Loading exam portal…</div>
+</div>
+
+<!-- TOP BAR (hidden during exam) -->
+<div class="topbar hidden" id="topbar">
+  <span class="topbar-title">Exam Portal</span>
+  <span style="font-size:12px;color:var(--text2)">Secure examination system</span>
+</div>
+
+<!-- ===== HOME ===== -->
+<div id="screen-home" class="hidden">
+  <div class="page" style="padding-top:2.5rem">
+    <div style="text-align:center;margin-bottom:2.5rem">
+      <div style="font-size:32px;font-weight:600;margin-bottom:8px">Welcome to Exam Portal</div>
+      <div style="color:var(--text2);font-size:15px;margin-bottom:1.75rem">Secure, proctored online examinations</div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="showScreen('admin-login')" style="padding:12px 30px;font-size:15px">Admin panel</button>
+        <button class="btn" onclick="showScreen('student-entry')" style="padding:12px 30px;font-size:15px">Take an exam</button>
+      </div>
+    </div>
+    <div id="home-exams"></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN LOGIN ===== -->
+<div id="screen-admin-login" class="hidden">
+  <div class="page-narrow">
+    <div class="card" style="margin-top:1rem">
+      <div class="section-title">Admin login</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Password</label>
+        <input type="password" id="admin-pass" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')adminLogin()">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="adminLogin()">Login</button>
+        <button class="btn" onclick="showScreen('home')">Back</button>
+      </div>
+      <div id="admin-login-err" class="err-text"></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:0.5px solid var(--border);font-size:12px;color:var(--text2)">
+        Default password: <strong>admin123</strong> &nbsp;|&nbsp; Change it in the settings section after login.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN DASHBOARD ===== -->
+<div id="screen-admin" class="hidden">
+  <div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem">
+      <div style="font-size:22px;font-weight:600">Admin dashboard</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="showScreen('create-exam')">+ New exam</button>
+        <button class="btn" onclick="showScreen('change-password')">Change password</button>
+        <button class="btn btn-danger" onclick="showScreen('home')">Logout</button>
+      </div>
+    </div>
+    <div style="font-size:16px;font-weight:500;margin-bottom:10px">Exams</div>
+    <div id="admin-exam-list" style="margin-bottom:2rem"></div>
+    <div style="font-size:16px;font-weight:500;margin-bottom:10px">Student results</div>
+    <div id="admin-results-table"></div>
+  </div>
+</div>
+
+<!-- ===== CHANGE PASSWORD ===== -->
+<div id="screen-change-password" class="hidden">
+  <div class="page-narrow">
+    <div class="card" style="margin-top:1rem">
+      <div class="section-title">Change admin password</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Current password</label>
+        <input type="password" id="cp-current" placeholder="Current password">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">New password</label>
+        <input type="password" id="cp-new" placeholder="New password (min 6 chars)">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Confirm new password</label>
+        <input type="password" id="cp-confirm" placeholder="Repeat new password">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="changePassword()">Update password</button>
+        <button class="btn" onclick="showScreen('admin')">Cancel</button>
+      </div>
+      <div id="cp-msg" style="font-size:13px;margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CREATE EXAM ===== -->
+<div id="screen-create-exam" class="hidden">
+  <div class="page">
+    <div style="font-size:22px;font-weight:600;margin-bottom:1.25rem">Create new exam</div>
+    <div class="card" style="margin-bottom:1.25rem">
+      <div style="font-size:15px;font-weight:500;margin-bottom:12px">Exam settings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div>
+          <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Exam title *</label>
+          <input type="text" id="exam-title" placeholder="e.g. Mathematics — Unit 3">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Duration (minutes) *</label>
+          <input type="number" id="exam-duration" value="30" min="5" max="180">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Passing marks (%)</label>
+          <input type="number" id="exam-pass" value="60" min="1" max="100">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Violations before auto-submit</label>
+          <input type="number" id="exam-violations" value="1" min="0" max="10">
+          <div style="font-size:12px;color:var(--text2);margin-top:4px">Set 0 to only warn, never auto-submit.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:15px;font-weight:500;margin-bottom:10px">Questions</div>
+    <div id="questions-container"></div>
+    <button class="btn btn-dashed" onclick="addQuestion()">+ Add question</button>
+
+    <div style="display:flex;gap:8px;margin-top:1.25rem">
+      <button class="btn btn-success" onclick="saveExam()">Save exam</button>
+      <button class="btn" onclick="showScreen('admin')">Cancel</button>
+    </div>
+    <div id="create-exam-msg" style="font-size:13px;margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- ===== STUDENT ENTRY ===== -->
+<div id="screen-student-entry" class="hidden">
+  <div class="page-narrow">
+    <div class="card" style="margin-top:1rem">
+      <div class="section-title">Student details</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Full name *</label>
+        <input type="text" id="student-name" placeholder="Your full name">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Roll number / Student ID *</label>
+        <input type="text" id="student-roll" placeholder="e.g. 2024CS042">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px">Select exam *</label>
+        <select id="student-exam-select"></select>
+      </div>
+      <div class="info-box" style="margin-bottom:16px">
+        <strong>Before you begin:</strong><br>
+        &bull; The exam will enter <strong>fullscreen mode</strong> automatically.<br>
+        &bull; Switching tabs, opening new windows, or pressing Esc may count as a <strong>violation</strong>.<br>
+        &bull; Too many violations will <strong>auto-submit</strong> your exam.<br>
+        &bull; Make sure you have a stable internet connection.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="startStudentExam()" style="flex:1">Start exam</button>
+        <button class="btn" onclick="showScreen('home')">Back</button>
+      </div>
+      <div id="student-entry-err" class="err-text"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXAM (fullscreen overlay) ===== -->
+<div id="screen-exam" class="hidden">
+  <div id="exam-inner">
+    <div class="exam-header">
+      <div>
+        <div style="font-size:17px;font-weight:600" id="exam-screen-title"></div>
+        <div style="font-size:13px;color:var(--text2)" id="exam-screen-student"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div id="violation-counter" style="font-size:13px;color:var(--amber);font-weight:500"></div>
+        <div class="timer" id="exam-timer">--:--</div>
+      </div>
+    </div>
+
+    <div id="violation-banner" class="warn-box hidden" style="margin-bottom:12px"></div>
+
+    <div id="exam-questions"></div>
+
+    <div style="margin-top:1.5rem;padding-bottom:2rem;display:flex;gap:10px;align-items:center">
+      <button class="btn btn-success" onclick="confirmSubmit()" style="padding:11px 26px;font-size:15px">Submit exam</button>
+      <span style="font-size:13px;color:var(--text2)" id="answered-count"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESULT ===== -->
+<div id="screen-result" class="hidden">
+  <div class="page-narrow">
+    <div class="card" style="text-align:center;margin-top:1rem">
+      <div id="result-icon" style="font-size:52px;margin-bottom:8px;line-height:1"></div>
+      <div id="result-status" style="font-size:24px;font-weight:600;margin-bottom:4px"></div>
+      <div id="result-student" style="color:var(--text2);font-size:14px;margin-bottom:1.5rem"></div>
+      <div class="result-grid">
+        <div class="metric"><div class="metric-label">Score</div><div class="metric-value" id="result-score"></div></div>
+        <div class="metric"><div class="metric-label">Correct</div><div class="metric-value" id="result-correct"></div></div>
+        <div class="metric"><div class="metric-label">Violations</div><div class="metric-value" id="result-violations"></div></div>
+      </div>
+      <div id="result-violation-note" style="font-size:13px;color:var(--red);margin-bottom:1rem;min-height:18px"></div>
+      <button class="btn btn-primary" onclick="showScreen('home')" style="width:100%;padding:11px">Back to home</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========================================================
+// STORAGE LAYER — uses window.storage (shared) so all
+// users on any device see the same exams and results.
+// Falls back to an in-memory object if the API is absent.
+// ========================================================
+const STORAGE_KEY = 'ep_main_data';
+const PASS_KEY    = 'ep_admin_pass';
+const DEFAULT_PASS = 'admin123';
+
+// In-memory fallback (used when window.storage is unavailable)
+const _mem = {};
+const store = {
+  async get(key, shared = false) {
+    try {
+      if (window.storage) {
+        const r = await window.storage.get(key, shared);
+        return r ? r.value : null;
+      }
+    } catch(_) {}
+    return _mem[key + (shared ? ':s' : '')] ?? null;
+  },
+  async set(key, value, shared = false) {
+    try {
+      if (window.storage) {
+        await window.storage.set(key, value, shared);
+        return;
+      }
+    } catch(_) {}
+    _mem[key + (shared ? ':s' : '')] = value;
+  }
+};
+
+// ---- State ----
+let adminPassword = DEFAULT_PASS;
+let state = {
+  exams: [], results: [],
+  currentExam: null, currentStudent: null,
+  timerInterval: null, timeLeft: 0,
+  violations: 0, maxViolations: 1,
+  answers: {}, submitting: false
+};
+
+// ---- Persistence ----
+async function save() {
+  try {
+    // Exams & results are SHARED so every user/device sees them
+    await store.set(STORAGE_KEY, JSON.stringify({ exams: state.exams, results: state.results }), true);
+    // Password is personal to admin's browser session
+    await store.set(PASS_KEY, adminPassword, false);
+  } catch(e) { console.warn('Save error:', e); }
+}
+
+async function load() {
+  try {
+    // Load shared data (exams visible to everyone)
+    const raw = await store.get(STORAGE_KEY, true);
+    if (raw) {
+      const d = JSON.parse(raw);
+      state.exams   = d.exams   || [];
+      state.results = d.results || [];
+    }
+    // Load personal password
+    const pass = await store.get(PASS_KEY, false);
+    if (pass) adminPassword = pass;
+  } catch(e) {
+    state.exams = []; state.results = [];
+  }
+}
+
+// ---- Screen Router ----
+function showScreen(name) {
+  document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById('screen-' + name).classList.remove('hidden');
+  const hideTopbar = name === 'exam';
+  document.getElementById('topbar').classList.toggle('hidden', hideTopbar);
+  if (name === 'home')         renderHome();
+  if (name === 'admin')        renderAdmin();
+  if (name === 'create-exam')  renderCreateExam();
+  if (name === 'student-entry') renderStudentEntry();
+}
+
+// ---- Home ----
+function renderHome() {
+  const el = document.getElementById('home-exams');
+  const active = state.exams.filter(e => e.active);
+  if (!active.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text2);padding:1.5rem;font-size:14px;background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border)">No exams are currently available. Ask your admin to create and activate one.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="font-size:16px;font-weight:500;margin-bottom:10px">Available exams</div>' +
+    active.map(e => `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:500;font-size:15px">${e.title}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:3px">${e.questions.length} questions &nbsp;&middot;&nbsp; ${e.duration} min &nbsp;&middot;&nbsp; Pass: ${e.passMarks}%</div>
+      </div>
+      <button class="btn btn-primary" onclick="quickStart('${e.id}')">Take exam</button>
+    </div>`).join('');
+}
+
+function quickStart(id) {
+  showScreen('student-entry');
+  setTimeout(() => { document.getElementById('student-exam-select').value = id; }, 50);
+}
+
+// ---- Admin Login ----
+function adminLogin() {
+  const p = document.getElementById('admin-pass').value;
+  if (p === adminPassword) {
+    document.getElementById('admin-login-err').textContent = '';
+    document.getElementById('admin-pass').value = '';
+    showScreen('admin');
+  } else {
+    document.getElementById('admin-login-err').textContent = 'Incorrect password. Please try again.';
+  }
+}
+
+// ---- Change Password ----
+async function changePassword() {
+  const cur  = document.getElementById('cp-current').value;
+  const nw   = document.getElementById('cp-new').value;
+  const conf = document.getElementById('cp-confirm').value;
+  const msg  = document.getElementById('cp-msg');
+  if (cur !== adminPassword) { msg.style.color = 'var(--red)'; msg.textContent = 'Current password is incorrect.'; return; }
+  if (nw.length < 6)         { msg.style.color = 'var(--red)'; msg.textContent = 'New password must be at least 6 characters.'; return; }
+  if (nw !== conf)           { msg.style.color = 'var(--red)'; msg.textContent = 'Passwords do not match.'; return; }
+  adminPassword = nw;
+  await save();
+  msg.style.color = 'var(--green)'; msg.textContent = 'Password updated successfully!';
+  setTimeout(() => showScreen('admin'), 1200);
+}
+
+// ---- Admin Dashboard ----
+function renderAdmin() {
+  renderExamList();
+  renderResultsTable();
+}
+
+function renderExamList() {
+  const el = document.getElementById('admin-exam-list');
+  if (!state.exams.length) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:14px;padding:0.5rem 0">No exams yet. Click "New exam" to get started.</div>';
+    return;
+  }
+  el.innerHTML = state.exams.map(e => `
+    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:500;font-size:15px">${e.title} <span class="badge ${e.active ? 'badge-success' : 'badge-warn'}">${e.active ? 'Active' : 'Inactive'}</span></div>
+        <div style="font-size:13px;color:var(--text2);margin-top:3px">${e.questions.length} questions &nbsp;&middot;&nbsp; ${e.duration} min &nbsp;&middot;&nbsp; Pass: ${e.passMarks}% &nbsp;&middot;&nbsp; Max violations: ${e.maxViolations > 0 ? e.maxViolations : 'unlimited'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" onclick="toggleExam('${e.id}')" style="font-size:13px;padding:6px 14px">${e.active ? 'Deactivate' : 'Activate'}</button>
+        <button class="btn btn-outline-danger" onclick="deleteExam('${e.id}')" style="font-size:13px;padding:6px 14px">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderResultsTable() {
+  const el = document.getElementById('admin-results-table');
+  if (!state.results.length) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:14px">No student results yet.</div>';
+    return;
+  }
+  el.innerHTML = `<div style="overflow-x:auto"><table>
+    <thead><tr>${['Student','Roll No','Exam','Score','Correct','Violations','Status','Submitted'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${state.results.slice().reverse().map(r => `<tr>
+      <td>${r.name}</td>
+      <td>${r.roll}</td>
+      <td>${r.examTitle}</td>
+      <td style="font-weight:500">${r.score}%</td>
+      <td>${r.correct}/${r.total}</td>
+      <td style="color:${r.violations > 0 ? 'var(--red)' : 'var(--text2)'}">${r.violations}${r.forced ? ' ⚠' : ''}</td>
+      <td><span class="${r.passed ? 'tag-pass' : 'tag-fail'}">${r.passed ? 'Pass' : 'Fail'}</span></td>
+      <td style="color:var(--text2)">${new Date(r.timestamp).toLocaleString()}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function toggleExam(id) {
+  const e = state.exams.find(x => x.id === id);
+  if (e) { e.active = !e.active; await save(); renderAdmin(); }
+}
+async function deleteExam(id) {
+  if (confirm('Delete this exam and all its data?')) {
+    state.exams = state.exams.filter(x => x.id !== id);
+    await save(); renderAdmin();
+  }
+}
+
+// ---- Create Exam ----
+let questionCount = 0;
+function renderCreateExam() {
+  document.getElementById('exam-title').value = '';
+  document.getElementById('exam-duration').value = 30;
+  document.getElementById('exam-pass').value = 60;
+  document.getElementById('exam-violations').value = 1;
+  questionCount = 0;
+  document.getElementById('questions-container').innerHTML = '';
+  document.getElementById('create-exam-msg').textContent = '';
+  addQuestion(); addQuestion(); addQuestion();
+}
+
+function addQuestion() {
+  questionCount++;
+  const n = questionCount;
+  const qc = document.getElementById('questions-container');
+  const div = document.createElement('div');
+  div.className = 'card'; div.style.marginBottom = '12px'; div.id = 'q-' + n;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:500;color:var(--text2)">Question ${n}</div>
+      <button class="btn btn-outline-danger" onclick="removeQuestion(${n})" style="padding:4px 10px;font-size:12px">Remove</button>
+    </div>
+    <div style="margin-bottom:10px">
+      <input type="text" id="q${n}-text" placeholder="Enter question text here">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      ${[0,1,2,3].map(i => `<div style="display:flex;align-items:center;gap:8px">
+        <input type="radio" name="q${n}-correct" value="${i}" ${i===0?'checked':''} id="q${n}-r${i}" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--blue)">
+        <input type="text" id="q${n}-opt${i}" placeholder="Option ${String.fromCharCode(65+i)}">
+      </div>`).join('')}
+    </div>
+    <div style="font-size:12px;color:var(--text2)">Select the radio button next to the correct answer option.</div>`;
+  qc.appendChild(div);
+}
+
+function removeQuestion(n) { document.getElementById('q-' + n)?.remove(); }
+
+async function saveExam() {
+  const title     = document.getElementById('exam-title').value.trim();
+  const duration  = parseInt(document.getElementById('exam-duration').value) || 30;
+  const passMarks = parseInt(document.getElementById('exam-pass').value) || 60;
+  const maxViol   = parseInt(document.getElementById('exam-violations').value) ?? 1;
+  const msg       = document.getElementById('create-exam-msg');
+  if (!title) { msg.style.color='var(--red)'; msg.textContent='Please enter an exam title.'; return; }
+  const questions = [];
+  document.querySelectorAll('[id^="q-"]').forEach(qEl => {
+    const n = qEl.id.replace('q-', '');
+    const text = document.getElementById(`q${n}-text`)?.value.trim();
+    if (!text) return;
+    const opts = [0,1,2,3].map(i => document.getElementById(`q${n}-opt${i}`)?.value.trim() || '');
+    const correctEl = document.querySelector(`input[name="q${n}-correct"]:checked`);
+    const correct = correctEl ? parseInt(correctEl.value) : 0;
+    questions.push({ text, opts, correct });
+  });
+  if (questions.length < 1) { msg.style.color='var(--red)'; msg.textContent='Add at least 1 question.'; return; }
+  state.exams.push({ id: 'ex-' + Date.now(), title, duration, passMarks, maxViolations: maxViol, questions, active: true, createdAt: Date.now() });
+  await save();
+  msg.style.color = 'var(--green)'; msg.textContent = 'Exam saved! Students can now see it.';
+  setTimeout(() => showScreen('admin'), 900);
+}
+
+// ---- Student Entry ----
+function renderStudentEntry() {
+  const sel = document.getElementById('student-exam-select');
+  const active = state.exams.filter(e => e.active);
+  sel.innerHTML = active.length
+    ? active.map(e => `<option value="${e.id}">${e.title} (${e.duration} min)</option>`).join('')
+    : '<option value="">No exams available</option>';
+}
+
+function startStudentExam() {
+  const name   = document.getElementById('student-name').value.trim();
+  const roll   = document.getElementById('student-roll').value.trim();
+  const examId = document.getElementById('student-exam-select').value;
+  const err    = document.getElementById('student-entry-err');
+  if (!name)   { err.textContent = 'Please enter your full name.'; return; }
+  if (!roll)   { err.textContent = 'Please enter your roll number.'; return; }
+  const exam = state.exams.find(e => e.id === examId);
+  if (!exam)   { err.textContent = 'Please select a valid exam.'; return; }
+  err.textContent = '';
+  state.currentExam    = exam;
+  state.currentStudent = { name, roll };
+  state.violations     = 0;
+  state.answers        = {};
+  state.submitting     = false;
+  state.maxViolations  = exam.maxViolations ?? 1;
+  launchExam();
+}
+
+// ---- Exam Engine ----
+function launchExam() {
+  showScreen('exam');
+  const exam = state.currentExam;
+  document.getElementById('exam-screen-title').textContent = exam.title;
+  document.getElementById('exam-screen-student').textContent = `${state.currentStudent.name} — ${state.currentStudent.roll}`;
+  document.getElementById('violation-banner').classList.add('hidden');
+  updateViolationCounter();
+  renderExamQuestions();
+  updateAnsweredCount();
+  startTimer(exam.duration * 60);
+  requestFullscreen();
+  setTimeout(attachAntiCheat, 600);
+}
+
+function renderExamQuestions() {
+  const exam = state.currentExam;
+  const el = document.getElementById('exam-questions');
+  el.innerHTML = exam.questions.map((q, qi) => `
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-weight:500;margin-bottom:12px;line-height:1.6;font-size:15px">${qi + 1}. ${q.text}</div>
+      ${q.opts.map((opt, oi) => `
+        <label class="opt-label ${state.answers[qi] === oi ? 'selected' : ''}" id="opt-${qi}-${oi}" onclick="selectAnswer(${qi},${oi})">
+          <input type="radio" name="q${qi}" value="${oi}" ${state.answers[qi] === oi ? 'checked' : ''} onchange="selectAnswer(${qi},${oi})">
+          <span style="font-size:14px">${String.fromCharCode(65+oi)}. &nbsp;${opt || '(no option text)'}</span>
+        </label>`).join('')}
+    </div>`).join('');
+}
+
+function selectAnswer(qi, oi) {
+  state.answers[qi] = oi;
+  document.querySelectorAll(`[id^="opt-${qi}-"]`).forEach(l => l.classList.remove('selected'));
+  document.getElementById(`opt-${qi}-${oi}`)?.classList.add('selected');
+  document.querySelectorAll(`input[name="q${qi}"]`).forEach(r => r.checked = parseInt(r.value) === oi);
+  updateAnsweredCount();
+}
+
+function updateAnsweredCount() {
+  const total    = state.currentExam?.questions.length || 0;
+  const answered = Object.keys(state.answers).length;
+  const el = document.getElementById('answered-count');
+  if (el) el.textContent = `${answered} of ${total} answered`;
+}
+
+function startTimer(seconds) {
+  state.timeLeft = seconds;
+  clearInterval(state.timerInterval);
+  const timerEl = document.getElementById('exam-timer');
+  function tick() {
+    state.timeLeft--;
+    const m = Math.floor(state.timeLeft / 60);
+    const s = state.timeLeft % 60;
+    if (timerEl) {
+      timerEl.textContent = `${m}:${s.toString().padStart(2, '00')}`;
+      timerEl.className = 'timer' + (state.timeLeft <= 60 ? ' urgent' : '');
+    }
+    if (state.timeLeft <= 0) { clearInterval(state.timerInterval); submitExam(false, 'Time expired'); }
+  }
+  tick();
+  state.timerInterval = setInterval(tick, 1000);
+}
+
+function requestFullscreen() {
+  const el = document.documentElement;
+  try { (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el); } catch(e) {}
+}
+function exitFullscreen() {
+  try { (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document); } catch(e) {}
+}
+
+// ---- Anti-Cheat ----
+function attachAntiCheat() {
+  document.addEventListener('visibilitychange', handleVisibility);
+  document.addEventListener('fullscreenchange', handleFullscreen);
+  document.addEventListener('webkitfullscreenchange', handleFullscreen);
+  document.addEventListener('mozfullscreenchange', handleFullscreen);
+  window.addEventListener('blur', handleWindowBlur);
+}
+function detachAntiCheat() {
+  document.removeEventListener('visibilitychange', handleVisibility);
+  document.removeEventListener('fullscreenchange', handleFullscreen);
+  document.removeEventListener('webkitfullscreenchange', handleFullscreen);
+  document.removeEventListener('mozfullscreenchange', handleFullscreen);
+  window.removeEventListener('blur', handleWindowBlur);
+}
+
+let lastBlur = 0;
+function handleWindowBlur() {
+  if (state.submitting || document.getElementById('screen-exam').classList.contains('hidden')) return;
+  const now = Date.now();
+  if (now - lastBlur < 600) return;
+  lastBlur = now;
+  registerViolation('Window lost focus — possible tab switch or alt-tab');
+}
+function handleVisibility() {
+  if (state.submitting || document.getElementById('screen-exam').classList.contains('hidden')) return;
+  if (document.hidden) registerViolation('Tab hidden — possible tab switch or new tab opened');
+}
+function handleFullscreen() {
+  if (state.submitting || document.getElementById('screen-exam').classList.contains('hidden')) return;
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+  if (!isFs) registerViolation('Exited fullscreen — Esc key or manual exit detected');
+}
+
+function registerViolation(reason) {
+  if (state.submitting) return;
+  state.violations++;
+  updateViolationCounter();
+  const banner = document.getElementById('violation-banner');
+  const limit = state.maxViolations;
+  const remaining = limit > 0 ? limit - state.violations : null;
+  if (banner) {
+    banner.classList.remove('hidden');
+    banner.innerHTML = `<strong>Violation ${state.violations} recorded:</strong> ${reason}.<br>${
+      limit > 0 && state.violations >= limit
+        ? '<strong>Maximum violations reached. Submitting exam automatically...</strong>'
+        : limit > 0
+          ? `You have ${remaining} violation(s) remaining before auto-submit.`
+          : 'Warning recorded. Please stay on this tab and in fullscreen.'
+    }`;
+  }
+  if (limit > 0 && state.violations >= limit) {
+    setTimeout(() => submitExam(true, reason), 1500);
+  }
+}
+
+function updateViolationCounter() {
+  const el = document.getElementById('violation-counter');
+  if (!el) return;
+  if (state.violations === 0) { el.textContent = ''; return; }
+  const limit = state.maxViolations;
+  el.textContent = `Violations: ${state.violations}${limit > 0 ? '/' + limit : ''}`;
+}
+
+function confirmSubmit() {
+  if (confirm('Are you sure you want to submit the exam? This cannot be undone.')) {
+    submitExam(false);
+  }
+}
+
+async function submitExam(forced = false, reason = '') {
+  if (state.submitting) return;
+  state.submitting = true;
+  clearInterval(state.timerInterval);
+  detachAntiCheat();
+  exitFullscreen();
+  document.getElementById('topbar').classList.remove('hidden');
+
+  const exam = state.currentExam;
+  let correct = 0;
+  exam.questions.forEach((q, i) => { if (state.answers[i] === q.correct) correct++; });
+  const total  = exam.questions.length;
+  const score  = total ? Math.round((correct / total) * 100) : 0;
+  const passed = score >= exam.passMarks;
+
+  const result = {
+    name: state.currentStudent.name, roll: state.currentStudent.roll,
+    examTitle: exam.title, examId: exam.id,
+    score, correct, total, violations: state.violations,
+    forced, forceReason: reason, passed, timestamp: Date.now()
+  };
+  state.results.push(result);
+  await save();   // saves result to shared storage so admin sees it
+
+  // Render result
+  const icon = document.getElementById('result-icon');
+  icon.textContent = passed ? '✓' : '✗';
+  icon.style.color = passed ? 'var(--green)' : 'var(--red)';
+  const status = document.getElementById('result-status');
+  status.textContent = passed ? 'Passed' : 'Failed';
+  status.style.color = passed ? 'var(--green)' : 'var(--red)';
+  document.getElementById('result-student').textContent = `${result.name} — ${result.roll}`;
+  document.getElementById('result-score').textContent = score + '%';
+  document.getElementById('result-correct').textContent = `${correct}/${total}`;
+  const vEl = document.getElementById('result-violations');
+  vEl.textContent = state.violations;
+  vEl.style.color = state.violations > 0 ? 'var(--red)' : 'var(--text)';
+  const note = document.getElementById('result-violation-note');
+  if (forced) note.textContent = `Exam was auto-submitted due to: ${reason}`;
+  else if (state.violations > 0) note.textContent = `${state.violations} violation(s) were recorded during this exam.`;
+  else note.textContent = 'No violations recorded.';
+
+  showScreen('result');
+}
+
+// ---- Init ----
+async function init() {
+  await load();
+  document.getElementById('loading-overlay').style.display = 'none';
+  document.getElementById('topbar').classList.remove('hidden');
+  showScreen('home');
+}
+init();
+</script>
+</body>
+</html>
